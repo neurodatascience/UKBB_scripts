@@ -4,7 +4,7 @@ from time import time
 import pathlib
 from shutil import copyfile
 import numpy as np
-bids_dict = json.load(open('UKBB_TO_REL_BIDS.json', 'r'))
+bids_dict = json.load(open('./UKBB_TO_REL_BIDS.json', 'r'))
 
 def bids(dir_uk_subject=None, output_directory=None, symlink=False, overwrite=False):
     if(dir_uk_subject is None):
@@ -18,6 +18,7 @@ def bids(dir_uk_subject=None, output_directory=None, symlink=False, overwrite=Fa
     # Walk through top-level directory;
 
     time_list = np.zeros(20)
+    has_copied=False
     for ind_subject, sub in enumerate(subject_dir):
         time_start = time()
         print('Converting {}'.format(sub))
@@ -28,7 +29,7 @@ def bids(dir_uk_subject=None, output_directory=None, symlink=False, overwrite=Fa
         for path, _, files in os.walk(subject_abs_dir):
             for fil in files:
                 file_name = join(path, fil)
-                bids_rel_name = get_bids_name(path, file_name)
+                bids_rel_name = get_bids_name(sub, file_name)
                 if(bids_rel_name is None):
                     continue
                 bids_abs_name = join(output_directory, bids_rel_name)
@@ -39,10 +40,12 @@ def bids(dir_uk_subject=None, output_directory=None, symlink=False, overwrite=Fa
                 else:
                     if(overwrite or not exists):
                         copyfile(file_name, bids_abs_name)
+                has_copied=True
         time_list[ind_subject % len(time_list)] = time() - time_start
-        time_left = np.mean(time_list[:ind_subject]) * (num_subject - ind_subject - 1)
+        time_left = np.mean(time_list[:ind_subject+1]) * (num_subject - ind_subject - 1)
         print('Estimated time left: {}s'.format(time_left))
-        break
+        if(has_copied):
+            break
 
 
 
