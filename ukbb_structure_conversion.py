@@ -29,6 +29,8 @@ def bids(dir_uk_subject=None, output_directory=None, symlink=False, overwrite=Fa
             for fil in files:
                 file_name = join(path, fil)
                 bids_rel_name = get_bids_name(path, file_name)
+                if(bids_rel_name is None):
+                    continue
                 bids_abs_name = join(output_directory, bids_rel_name)
                 exists = os.path.exists(bids_abs_name)
                 if(symlink):
