@@ -4,7 +4,7 @@ from time import time
 import pathlib
 from shutil import copyfile
 import numpy as np
-bids_dict = json.load('UKBB_TO_REL_BIDS.json')
+bids_dict = json.load(open('UKBB_TO_REL_BIDS.json', 'r'))
 
 def bids(dir_uk_subject=None, output_directory=None, symlink=False, overwrite=False):
     if(dir_uk_subject is None):
