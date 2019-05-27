@@ -4,7 +4,8 @@ from time import time
 import pathlib
 from shutil import copyfile
 import numpy as np
-bids_dict = json.load(open('UKBB_TO_REL_BIDS.json', 'r'))
+from .REL_DICT import bids_dict
+#bids_dict = json.load(open('UKBB_TO_REL_BIDS.json', 'r'))
 
 def bids(dir_uk_subject=None, output_directory=None, symlink=False, overwrite=False):
     if(dir_uk_subject is None):
@@ -35,7 +36,7 @@ def bids(dir_uk_subject=None, output_directory=None, symlink=False, overwrite=Fa
                 exists = os.path.exists(bids_abs_name)
                 if(symlink):
                     if(overwrite or not exists):
-                        os.symlink(file_name, bids_abs_name)
+                        os.symlink(bids_abs_name, file_name)
                 else:
                     if(overwrite or not exists):
                         copyfile(file_name, bids_abs_name)
