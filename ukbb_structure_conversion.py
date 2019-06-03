@@ -5,8 +5,6 @@ import pathlib
 from shutil import copyfile
 import numpy as np
 from .REL_DICT import bids_dict
-#bids_dict = json.load(open('UKBB_TO_REL_BIDS.json', 'r'))
-
 def bids(dir_uk_subject=None, output_directory=None, symlink=False, overwrite=False):
     if(dir_uk_subject is None):
         raise ValueError('Specify dir_uk_subject (UK_Subject from UKBB)')
@@ -29,7 +27,7 @@ def bids(dir_uk_subject=None, output_directory=None, symlink=False, overwrite=Fa
         for path, _, files in os.walk(subject_abs_dir):
             for fil in files:
                 file_name = join(path, fil)
-                bids_rel_name = get_bids_name(path, file_name)
+                bids_rel_name = get_bids_name(sub, file_name)
                 if(bids_rel_name is None):
                     continue
                 bids_abs_name = join(output_directory, bids_rel_name)
@@ -42,10 +40,9 @@ def bids(dir_uk_subject=None, output_directory=None, symlink=False, overwrite=Fa
                 else:
                     if(overwrite or not exists):
                         copyfile(file_name, bids_abs_name)
-        time_list[ind_subject % len(time_list)] = time() - time_start
+                
         time_left = np.mean(time_list[:ind_subject]) * (num_subject - ind_subject - 1)
         print('Estimated time left: {0:.02f}s'.format(time_left))
-        break
     return
 
 def get_bids_name(subject, file_name):
