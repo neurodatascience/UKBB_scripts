@@ -20,11 +20,31 @@ rf_file = 'fMRI/rfMRI.nii.gz'
 dmri_file = 'dMRI/dMRI/*.nii.gz'
 dmri_count = 14
 
-def data_integrity_check(dir_master, bulk_file):
+def data_integrity_check(dir_master:str, bulk_file:str):
+    """Function for performing sanity check that the contents of bulk data have been downloaded and unzipped.
+
+    This function checks that T1, T2, SWI, tfMRI, rfMRI, and DWI have been downloaded and unzipped.
+
+    Parameters
+    ----------
+    dir_master
+        Top-level directory where subject directories are kept.
+    bulk_file
+        The bulk file containing a list of subject ID - datafield pairs (separated by a space, one pair per line)
+
+    Returns
+    ----------
+    missing_data_dict
+        Dictionary listing the missing data, keyed by subject ID.
+    dat_count
+        Number of files found.
+    """
+    # (missing_data_dict, datacount) = data_integrity_check(UK_Subject, uk_bulk_file.bulk)
     # Make code -> checker function directory
     check_func = [t1_check, t2_check, swi_check, tf_check, rf_check, dmri_check]
     check_dict = dict()
     dat_count = dd(int)
+    # check_dict will take in a code and return the function which checks the code (mostly checking for existence of files)
     for c, f in zip(checklist, check_func):
         check_dict[c] = f
 
@@ -32,7 +52,7 @@ def data_integrity_check(dir_master, bulk_file):
     #sub_list = os.listdir(dir_master)
     # Create subject-data pair
     sub_data = dd(list)
-    missing_data = dd(list)
+    missing_data_dict = dd(list)
 
     f = open(bulk_file, 'r')
     bulk_contents = f.readlines()
@@ -52,32 +72,31 @@ def data_integrity_check(dir_master, bulk_file):
             if(not check_dict[dat_code](sub, directory=dir_master)):
                 # Data not found!
                 print('Missing: {} - {}'.format(sub, dat_code))
-                missing_data[sub].append(dat_code)
+                missing_data_dict[sub].append(dat_code)
             else:
                 dat_count[dat_code] += 1
         if count % int(num_sub/100) == 0:
             print('{0:.1f}% done'.format(count / num_sub*100))
         count += 1
-    return missing_data, dat_count
+    return missing_data_dict, dat_count
 
 
-
-def t1_check(subject, directory='./'):
+def t1_check(subject:str, directory='./'):
     return os.path.exists(os.path.join(directory, subject, t1_file))
 
-def t2_check(subject, directory='./'):
+def t2_check(subject:str, directory='./'):
     return os.path.exists(os.path.join(directory, subject, t2_file))
 
-def swi_check(subject, directory='./'):
+def swi_check(subject:str, directory='./'):
     return os.path.exists(os.path.join(directory, subject, swi_file))
 
-def tf_check(subject, directory='./'):
+def tf_check(subject:str, directory='./'):
     return os.path.exists(os.path.join(directory, subject, tf_file))
 
-def rf_check(subject, directory='./'):
+def rf_check(subject:str, directory='./'):
     return os.path.exists(os.path.join(directory, subject, rf_file))
 
-def dmri_check(subject, directory='./'):
+def dmri_check(subject:str, directory='./'):
     # Count files
     try:
         dir_list = os.listdir(os.path.join(directory, subject, 'dMRI','dMRI'))

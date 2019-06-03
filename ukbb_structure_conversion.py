@@ -33,6 +33,8 @@ def bids(dir_uk_subject=None, output_directory=None, symlink=False, overwrite=Fa
                 if(bids_rel_name is None):
                     continue
                 bids_abs_name = join(output_directory, bids_rel_name)
+                bids_abs_path = join(os.sep, bids_abs_name.split(os.sep)[:-1])
+                pathlib.Path(bids_abs_path).mkdir(parents=True, exist_ok=True)
                 exists = os.path.exists(bids_abs_name)
                 if(symlink):
                     if(overwrite or not exists):
@@ -42,13 +44,8 @@ def bids(dir_uk_subject=None, output_directory=None, symlink=False, overwrite=Fa
                         copyfile(file_name, bids_abs_name)
         time_list[ind_subject % len(time_list)] = time() - time_start
         time_left = np.mean(time_list[:ind_subject]) * (num_subject - ind_subject - 1)
-        print('Estimated time left: {}s'.format(time_left))
+        print('Estimated time left: {0:.02f}s'.format(time_left))
         break
-
-
-
-
-
     return
 
 def get_bids_name(subject, file_name):
