@@ -18,7 +18,7 @@ def bids(dir_uk_subject=None, output_directory=None, symlink=False, overwrite=Fa
 
     # Walk through top-level directory;
 
-    time_list = np.zeros(20)
+    time_list = np.zeros(1000)
     for ind_subject, sub in enumerate(subject_dir):
         time_start = time()
         print('Converting {}'.format(sub))
