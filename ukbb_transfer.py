@@ -208,7 +208,7 @@ def generate_bulk_slurm(bulk_filename: str, key_filename: str, save_name: str, n
                    ' -ofetched_$((SLURM_ARRAY_TASK_ID))' \
                    ' -s$((SLURM_ARRAY_TASK_ID*' + str(num_files_per_job) + '+{0})) -m{1}\n'
 
-    for fetch_ind in range(math.ceil(ukbfetch_max_files/num_files_per_job)+1):
+    for fetch_ind in range(math.ceil(num_files_per_job/ukbfetch_max_files)):
         files_in_fetch = min(num_files_per_job - ukbfetch_max_files*fetch_ind, ukbfetch_max_files)
         f.write(fetch_string.format(ukbfetch_max_files*fetch_ind, files_in_fetch))
     f.close()
