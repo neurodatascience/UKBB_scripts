@@ -135,7 +135,11 @@ def reduce_bulk_from_fetched(bulk_filename: str, fetched_filename: str, save_fil
     # Clean fetched in case .zip is present
     for ind, fetched in enumerate(fetched_list):
         if('.zip' in fetched):
-            fetched_list[ind] = fetched.split('.zip')[0]
+            buf = fetched.split('.zip')[0]
+            # Split into [subject] [datafield] pairs
+            sub_split = buf.split('_')
+            fetched_list[ind] = '{} {}\n'.format(sub_split[0], '_'.join(sub_split[1:]))
+
     missing_list = []
     # Iterate through bulk; if not in fetched, add to missing
     for bulked in bulk_list:
@@ -146,17 +150,20 @@ def reduce_bulk_from_fetched(bulk_filename: str, fetched_filename: str, save_fil
         # save missing_list
         f = open(save_file,'w')
         for mis in missing_list:
-            f.write(mis + '\n')
+            if(mis[-1] != '\n'):
+                f.write(mis + '\n')
+            else:
+                f.write(mis)
         f.close()
 
     return missing_list
 
 
-def generate_bulk_slurm(bulk_filename: str, key_filename: str, save_name: str, num_jobs: int=10, connection_speed=30,
+def generate_bulk_slurm(bulk_filename: str, key_filename: str, save_name: str, num_jobs: int=10, connection_speed=10,
                         slurm_account: str=None) -> None:
     """
     Generates a SLURM job file to match program constraints. UKBB allows up to 10 simultaneous downloads, and the
-    ukbfetch utility allows up to 50,000 lines per call.
+    ukbfetch utility allows up to 1000 lines per call.
 
     Parameters
     ----------
@@ -180,10 +187,10 @@ def generate_bulk_slurm(bulk_filename: str, key_filename: str, save_name: str, n
     """
     # Max number of simultaneous downloads is 10
     # (https://biobank.ndph.ox.ac.uk/showcase/docs/ukbfetch_instruct.html, section 2)
-    # ukbfetch can fetch up to 50,000 lines
+    # ukbfetch can fetch up to 1,000 lines (docs say 50k; program says 1k)
 
-    average_file_size = 150  # size in MB
-    ukbfetch_max_files = 50000
+    average_file_size = 500  # size in MB
+    ukbfetch_max_files = 1000
 
     f = open(save_name, 'w')
     if(num_jobs>10):
