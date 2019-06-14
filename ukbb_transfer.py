@@ -212,7 +212,7 @@ def generate_bulk_slurm(bulk_filename: str, key_filename: str, save_name: str, n
     expected_time = _convert_seconds(expected_time_per_job)
     f.write('#SBATCH --time={}-{}:{}\n\n'.format(*expected_time))
     fetch_string = 'ukbfetch -b' + bulk_filename + ' -a' + key_filename + \
-                   ' -ofetched_$((SLURM_ARRAY_TASK_ID+{2}))' \
+                   ' -ofetched_$((SLURM_ARRAY_TASK_ID))_{2}' \
                    ' -s$((SLURM_ARRAY_TASK_ID*' + str(num_files_per_job) + '+{0})) -m{1}\n'
 
     for fetch_ind in range(math.ceil(num_files_per_job/ukbfetch_max_files)):
@@ -224,7 +224,7 @@ def generate_bulk_slurm(bulk_filename: str, key_filename: str, save_name: str, n
 
 
 def _convert_seconds(seconds: float) -> (int, int, int):
-    '''Converts seconds to d:h:m'''
+    """Converts seconds to d:h:m"""
     days = int(seconds/60/60/24)
     hours = int(seconds/60/60 - days*24)
     minutes = math.ceil(seconds/60 - days*24*60 - hours*60)
