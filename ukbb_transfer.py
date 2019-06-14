@@ -212,12 +212,12 @@ def generate_bulk_slurm(bulk_filename: str, key_filename: str, save_name: str, n
     expected_time = _convert_seconds(expected_time_per_job)
     f.write('#SBATCH --time={}-{}:{}\n\n'.format(*expected_time))
     fetch_string = 'ukbfetch -b' + bulk_filename + ' -a' + key_filename + \
-                   ' -ofetched_$((SLURM_ARRAY_TASK_ID))' \
+                   ' -ofetched_$((SLURM_ARRAY_TASK_ID+{2}))' \
                    ' -s$((SLURM_ARRAY_TASK_ID*' + str(num_files_per_job) + '+{0})) -m{1}\n'
 
     for fetch_ind in range(math.ceil(num_files_per_job/ukbfetch_max_files)):
         files_in_fetch = min(num_files_per_job - ukbfetch_max_files*fetch_ind, ukbfetch_max_files)
-        f.write(fetch_string.format(ukbfetch_max_files*fetch_ind, files_in_fetch))
+        f.write(fetch_string.format(ukbfetch_max_files*fetch_ind, files_in_fetch, fetch_ind))
     f.close()
     print('SLURM batch file generated; estimated completion time is {}d:{}h'.format(expected_time[0], expected_time[1]))
     return
