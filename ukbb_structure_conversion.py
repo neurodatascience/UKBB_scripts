@@ -69,6 +69,9 @@ def bids_preproc(master_directory, output_directory, symlink=True, overwrite=Fal
             if(bids_rel_name is None):
                 # This should never happen
                 continue
+            # no file:
+            if(not source_exists):
+                continue
             bids_abs_name = join(output_directory, bids_rel_name)
             # Get directory from file name
             bids_abs_path = join(output_directory, join(bids_rel_name.split(os.sep)[-1]))
