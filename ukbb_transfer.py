@@ -221,7 +221,7 @@ def generate_bulk_slurm(bulk_filename: str, key_filename: str, save_name: str, n
     f.close()
     print('SLURM batch file generated; estimated completion time is {}d:{}h'.format(expected_time[0], expected_time[1]))
     return
-
+f
 
 def _convert_seconds(seconds: float) -> (int, int, int):
     """Converts seconds to d:h:m"""
