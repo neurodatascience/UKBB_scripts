@@ -74,7 +74,7 @@ def bids_preproc(master_directory, output_directory, symlink=True, overwrite=Fal
                 continue
             bids_abs_name = join(output_directory, bids_rel_name)
             # Get directory from file name
-            bids_abs_path = join(output_directory, join(bids_rel_name.split(os.sep)[-1]))
+            bids_abs_path = join(output_directory, join(bids_rel_name.split(os.sep)[:-1]))
             pathlib.Path(bids_abs_path).mkdir(parents=True, exist_ok=True)
             target_exists = os.path.exists(bids_abs_name)
             if (symlink):
