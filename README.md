@@ -1,6 +1,6 @@
-# UKBB_Handler
+# UKBB_scripts
 
-UKBB_Handler is a collection of scripts for dealing with various aspects of the UKBB. It is currently in development.
+UKBB_scripts is a collection of scripts for dealing with various aspects of the UKBB. It is currently in development.
 
 ukbb_integrity:
 	Checks subjects in a BIDS-format directory to confirm that they have the following modalities: T1, T2, SWI, tfMRI, rfMRI, DWI. A .bulk file is generated for missing files.
