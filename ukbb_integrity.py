@@ -19,6 +19,7 @@ rf_file = 'fMRI/rfMRI.nii.gz'
 dmri_file = 'dMRI/dMRI/*.nii.gz'
 dmri_count = 14
 
+
 def data_integrity_check(dir_master:str, bulk_file:str):
     """Function for performing sanity check that the contents of bulk data have been downloaded and unzipped.
 
