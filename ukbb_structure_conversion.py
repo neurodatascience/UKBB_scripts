@@ -52,9 +52,6 @@ def bids_from_zip(zip_filepath: str, raw_dir: str = None, derivatives_dir: str =
     # Format is SUBJECT_DATAFIELD_SESSION_ARRAYIND.zip
     subject, datafield, session, arrayind = zip_filename[:-4].split('_')
 
-    bids_raw = []
-    bids_derivs = []
-    bids_source = []
     file_list = []
 
     for path, _, files in os.walk(unzipped_dir):
@@ -71,14 +68,12 @@ def bids_from_zip(zip_filepath: str, raw_dir: str = None, derivatives_dir: str =
             bids_path = bids_name[:bids_name.rfind(os.sep)]
             pathlib.Path(bids_path).mkdir(parents=True, exist_ok=True)
             os.rename(join(unzipped_dir, file), join(raw_dir, raw_bids))
-            bids_raw.append(raw_bids)
         elif (source_bids is not None and source_dir is not None):
             # File is source
             bids_name = join(source_dir, source_bids)
             bids_path = bids_name[:bids_name.rfind(os.sep)]
             pathlib.Path(bids_path).mkdir(parents=True, exist_ok=True)
             os.rename(join(unzipped_dir, file), join(source_dir, source_bids))
-            bids_source.append(source_bids)
         elif(deriv_bids is not None and derivatives_dir is not None):
             # NOTE: Derivs must be checked last; since there's no standard for derivatives yet, we're placing
             # everything there as-is, but prepended with the subject ID.
@@ -87,7 +82,6 @@ def bids_from_zip(zip_filepath: str, raw_dir: str = None, derivatives_dir: str =
             bids_path = bids_name[:bids_name.rfind(os.sep)]
             pathlib.Path(bids_path).mkdir(parents=True, exist_ok=True)
             os.rename(join(unzipped_dir, file), join(derivatives_dir, deriv_bids))
-            bids_derivs.append(deriv_bids)
         else:
             Warning(f'File {file} was not sorted.')
 
@@ -174,9 +168,6 @@ def main():
     parser.add_argument('--source_dir', help='destination for source data')
     parser.add_argument('--derivatives_dir', help='destination for derivative data')
     args = parser.parse_args()
-    print(args)
-    print(args.zip_filepath)
-    print(args.raw_dir)
     bids_from_zip(args.zip_filepath, raw_dir=args.raw_dir, derivatives_dir=args.derivatives_dir,
                   source_dir=args.source_dir)
     return
