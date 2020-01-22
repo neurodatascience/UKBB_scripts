@@ -2,7 +2,7 @@ import os, math
 
 
 def identify_missing_bids(source_list_filename: str, dest_list_filename: str,
-                          subject_savename: str=None, missing_savename: str=None) -> (list, list):
+                          subject_savename: str = None, missing_savename: str = None) -> (list, list):
     """
     Given a list of files in the source and the destination, this function creates a list of files which still need to
     be transferred. The purpose is to speed up rsync.
@@ -221,7 +221,7 @@ def generate_bulk_slurm(bulk_filename: str, key_filename: str, save_name: str, n
     f.close()
     print('SLURM batch file generated; estimated completion time is {}d:{}h'.format(expected_time[0], expected_time[1]))
     return
-f
+
 
 def _convert_seconds(seconds: float) -> (int, int, int):
     """Converts seconds to d:h:m"""

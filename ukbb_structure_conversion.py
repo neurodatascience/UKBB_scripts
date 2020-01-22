@@ -1,124 +1,186 @@
-import os, json
+import os
 from os.path import join
-from time import time
 import pathlib
-from shutil import copyfile
-import numpy as np
-import sys
-from .REL_DICT import bids_dict
-from .REL_DICT import bids_preproc_dict
+import zipfile
+import tempfile
+import shutil
+import argparse
 
-def bids(dir_uk_subject=None, output_directory=None, symlink=False, overwrite=False):
-    if(dir_uk_subject is None):
-        raise ValueError('Specify dir_uk_subject (UK_Subject from UKBB)')
-    if(output_directory is None):
-        raise ValueError('Specify output directory')
+# Workaround to work as module and have __main__. I don't like it, but I haven't found a better way to do it.
+if(__package__ is not None):
+    from .REL_DICT import ukbb_bids_dict
+    from .REL_DICT import ukbb_derivs_toplevel
+    from .REL_DICT import ukbb_source_dict
+else:
+    from REL_DICT import ukbb_bids_dict
+    from REL_DICT import ukbb_derivs_toplevel
+    from REL_DICT import ukbb_source_dict
 
-    subject_dir = os.listdir(dir_uk_subject)
-    num_subject = len(subject_dir)
 
-    # Walk through top-level directory;
+def bids_from_zip(zip_filepath: str, raw_dir: str = None, derivatives_dir: str = None, source_dir: str = None):
+    '''
+    Converts the zip file of NIfTI images downloaded from the UKBB into BIDS.
+    NOTE: At the time this code was written, the derivatives/ extension was not part of the specs. As such, derivatives
+    are prepended with subject ID and
+    Parameters
+    ----------
+    zip_filepath: str
+        Path of the downloaded zip file
+    raw_dir : str
+        Optional. Path where to place raw data. Output will be saved in 'raw_dir/sub-XXXX'.
+        If undefined, raw data will not be extracted.
+    derivatives_dir : str
+        Optional. Path where to place derivatives (non-raw) data. Output will be saved in 'derivatives_dir/sub-XXX'.
+        If undefined, derivatives will not be extracted.
+    source_dir : str
+        Optional. Path where to place source (raw files used to compute a secondary modality e.g. SWI->QSM). Output
+        will be saved in source_dir/sub-XXXX
+    Returns
+    -------
 
-    time_list = np.zeros(1000)
-    for ind_subject, sub in enumerate(subject_dir):
-        time_start = time()
-        print('Converting {}'.format(sub))
-        # Create output directory
-        pathlib.Path(join(output_directory, 'sub-{}'.format(sub))).mkdir(parents=True, exist_ok=True)
-        # Walk through subject, copy/link to BIDS as relevant
-        subject_abs_dir = join(dir_uk_subject, sub)
-        for path, _, files in os.walk(subject_abs_dir):
-            for fil in files:
-                file_name = join(path, fil)
-                bids_rel_name = get_bids_name(sub, file_name)
-                if(bids_rel_name is None):
-                    continue
-                bids_abs_name = join(output_directory, bids_rel_name)
-                bids_abs_path = join(os.sep, bids_abs_name.split(os.sep)[:-1])
-                pathlib.Path(bids_abs_path).mkdir(parents=True, exist_ok=True)
-                exists = os.path.exists(bids_abs_name)
-                if(symlink):
-                    if(overwrite or not exists):
-                        os.symlink(bids_abs_name, file_name)
-                else:
-                    if(overwrite or not exists):
-                        copyfile(file_name, bids_abs_name)
-                
-        time_left = np.mean(time_list[:ind_subject]) * (num_subject - ind_subject - 1)
-        print('Estimated time left: {0:.02f}s'.format(time_left))
+    '''
+    if(raw_dir == derivatives_dir == source_dir == None):
+        Warning('Either raw_dir, derivatives_dir, or source_dir must be defined for anything to be done.')
+        return
+    zip_data = zipfile.ZipFile(zip_filepath)
+
+    # Extract all files into temporary directory (NOTE: extracting all files at once vs. one at a time is ~2x as fast)
+    unzipped_dir = tempfile.mkdtemp()
+    zip_data.extractall(unzipped_dir)
+    # Get filename without leading path
+    zip_filename = zip_filepath.split(os.sep)[-1]
+    # Format is SUBJECT_DATAFIELD_SESSION_ARRAYIND.zip
+    subject, datafield, session, arrayind = zip_filename[:-4].split('_')
+
+    bids_raw = []
+    bids_derivs = []
+    bids_source = []
+    file_list = []
+
+    for path, _, files in os.walk(unzipped_dir):
+        for f in files:
+            file_list.append(os.path.join(path.replace(unzipped_dir + os.sep, ''), f))
+    for file in file_list:
+        raw_bids = get_bids_raw_name(subject, file)
+        source_bids = get_bids_source_name(subject, file)
+        deriv_bids = get_bids_derivs_name(subject, file)
+        if(raw_bids is not None and raw_dir is not None):
+            # File is raw; put in raw dir
+            # zip_data.extract(file, raw_bids)
+            bids_name = join(raw_dir, raw_bids)
+            bids_path = bids_name[:bids_name.rfind(os.sep)]
+            pathlib.Path(bids_path).mkdir(parents=True, exist_ok=True)
+            os.rename(join(unzipped_dir, file), join(raw_dir, raw_bids))
+            bids_raw.append(raw_bids)
+        elif (source_bids is not None and source_dir is not None):
+            # File is source
+            bids_name = join(source_dir, source_bids)
+            bids_path = bids_name[:bids_name.rfind(os.sep)]
+            pathlib.Path(bids_path).mkdir(parents=True, exist_ok=True)
+            os.rename(join(unzipped_dir, file), join(source_dir, source_bids))
+            bids_source.append(source_bids)
+        elif(deriv_bids is not None and derivatives_dir is not None):
+            # NOTE: Derivs must be checked last; since there's no standard for derivatives yet, we're placing
+            # everything there as-is, but prepended with the subject ID.
+            # File is derivatives
+            bids_name = join(derivatives_dir, deriv_bids)
+            bids_path = bids_name[:bids_name.rfind(os.sep)]
+            pathlib.Path(bids_path).mkdir(parents=True, exist_ok=True)
+            os.rename(join(unzipped_dir, file), join(derivatives_dir, deriv_bids))
+            bids_derivs.append(deriv_bids)
+        else:
+            Warning(f'File {file} was not sorted.')
+
+    shutil.rmtree(unzipped_dir)
     return
 
 
-def bids_preproc(master_directory, output_directory, symlink=True, overwrite=False):
-    subject_listdir = os.listdir(master_directory)
-    num_subject = len(subject_listdir)
+def get_bids_source_name(subject: str, file_name: str):
+    '''
+    Given a subject ID and filename, will return the BIDS-like name for source data. Note that the 'source' folder is
+    not currently restricted under BIDS.
+    Parameters
+    ----------
+    subject : str
+        Subject ID
+    file_name : str
+        Name of the file relative to top-level of downloaded zip.
 
-    # Walk through top-level directory
-    time_list = np.zeros(1000)
-    key_files = bids_preproc_dict.keys()
-    for ind_subject, sub in enumerate(subject_listdir):
-        time_start = time()
-        #print_string = 'Converting {}'.format(sub)
-        pathlib.Path(join(output_directory, 'sub-{}'.format(sub))).mkdir(parents=True, exist_ok=True)
-
-        subject_abs_dir = join(master_directory, sub)
-        for key in key_files:
-            file_name = join(subject_abs_dir, key)
-            source_exists = os.path.exists(file_name)
-            bids_rel_name = _get_bids_preproc_name(sub, file_name)
-            if(bids_rel_name is None):
-                # This should never happen
-                continue
-            # no file:
-            if(not source_exists):
-                continue
-            bids_abs_name = join(output_directory, bids_rel_name)
-            # Get directory from file name
-            bids_abs_path = join(output_directory, join(bids_rel_name.split(os.sep)[:-1]))
-            pathlib.Path(bids_abs_path).mkdir(parents=True, exist_ok=True)
-            target_exists = os.path.exists(bids_abs_name)
-            if (symlink):
-                if (overwrite or not target_exists):
-                    os.symlink(bids_abs_name, file_name)
-            else:
-                if (overwrite or not target_exists):
-                    copyfile(file_name, bids_abs_name)
-        time_list[ind_subject % 1000] = time() - time_start
-        time_remaining = np.mean(time_list[:ind_subject]) * (num_subject - ind_subject - 1)
-        print('Converted {0} - Time remaining: {1:.02f}s'.format(sub, time_remaining))
-    return
-
-
-def get_bids_name(subject, file_name):
-    # Returns BIDS filename, relative to top-level directory ( OUTPUT_DIRECTORY/ )
-
-    # Split filename according to subject
-    file_split = file_name.split(subject + '/')[-1]
+    Returns
+    -------
+        BIDS-like path for new file
+    '''
     try:
-        bids_name = bids_dict[file_split].replace('@SUBJECT@', subject)
+        bids_source_name = ukbb_source_dict[file_name].replace('@SUBJECT@', subject)
+        return bids_source_name
+    except(KeyError):
+        return None
+
+
+def get_bids_raw_name(subject: str, file_name: str):
+    '''
+    Given a subject ID and filename, will return the BIDS name for raw data
+    Parameters
+    ----------
+    subject : str
+        Subject ID
+    file_name : str
+        Name of the file relative to top-level of downloaded zip.
+
+    Returns
+    -------
+        BIDS path for new file
+    '''
+    # Returns BIDS filename, relative to top-level directory ( OUTPUT_DIRECTORY/ )
+    # Split filename according to subject
+    # file_split = file_name.split(subject + '/')[-1]
+    try:
+        bids_name = ukbb_bids_dict[file_name].replace('@SUBJECT@', subject)
         return bids_name
     except KeyError:
         return None
 
-def _get_bids_preproc_name(subject, file_name):
+
+def get_bids_derivs_name(subject: str, file_name: str):
     """
-    Returns file name (including directory) for input file.
+    Given a subject ID and filename, will return a BIDS-like name for derivative data
 
     Parameters
     ----------
     subject : str
-        Subject ID for file.
+        Subject ID
     file_name : str
-        Name of the file to be converted to BIDS format.
+        Name of the file relative to top-level of downloaded zip.
 
     Returns
     ----------
     str
-        Full path for new file
+        BIDS-like path for new file
     """
-    # Input is of the form SUBJECT/files
-    file_split = file_name.split(subject + os.sep)[-1]
+    # First get top-level directory
     try:
-        return bids_preproc_dict[file_split].replace('@SUBJECT@', subject)
-    except KeyError:
+        top_level = file_name.split(os.sep)[0]
+        bids_top_level = ukbb_derivs_toplevel[top_level].replace('@SUBJECT@', subject)
+        file_path = os.path.join(*file_name.split(os.sep)[1:])
+        return os.path.join(bids_top_level + file_path)
+    except(KeyError):
         return None
+
+
+def main():
+    parser = argparse.ArgumentParser('Convert .zip file downloaded from UKBB to BIDS')
+    parser.add_argument('zip_filepath', help='name of the file to convert')
+    parser.add_argument('--raw_dir', help='destination for raw BIDS data')
+    parser.add_argument('--source_dir', help='destination for source data')
+    parser.add_argument('--derivatives_dir', help='destination for derivative data')
+    args = parser.parse_args()
+    print(args)
+    print(args.zip_filepath)
+    print(args.raw_dir)
+    bids_from_zip(args.zip_filepath, raw_dir=args.raw_dir, derivatives_dir=args.derivatives_dir,
+                  source_dir=args.source_dir)
+    return
+
+
+if __name__ == '__main__':
+    main()

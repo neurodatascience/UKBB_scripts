@@ -83,17 +83,22 @@ def data_integrity_check(dir_master:str, bulk_file:str):
 def t1_check(subject:str, directory='./'):
     return os.path.exists(os.path.join(directory, subject, t1_file))
 
+
 def t2_check(subject:str, directory='./'):
     return os.path.exists(os.path.join(directory, subject, t2_file))
+
 
 def swi_check(subject:str, directory='./'):
     return os.path.exists(os.path.join(directory, subject, swi_file))
 
+
 def tf_check(subject:str, directory='./'):
     return os.path.exists(os.path.join(directory, subject, tf_file))
 
+
 def rf_check(subject:str, directory='./'):
     return os.path.exists(os.path.join(directory, subject, rf_file))
+
 
 def dmri_check(subject:str, directory='./'):
     # Count files

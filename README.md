@@ -7,7 +7,7 @@ ukbb_integrity:
 	NOTE: Missing files may be missing because they do not exist.
 
 ukbb_structure_conversion:
-	Converts (MODALITY)/(files...) to BIDS-adjacent (sans .json) format.
+	Converts downloaded zip folders to BIDS-adjacent (sans .json) format.
 
 ukbb_transfer:
 	Functions for verifying that data transfers across systems; dealing with missing BIDS files, handling .lis files, and creating SLURM job files for parallel downloading.
