@@ -67,13 +67,19 @@ def bids_from_zip(zip_filepath: str, raw_dir: str = None, derivatives_dir: str =
             bids_name = join(raw_dir, raw_bids)
             bids_path = bids_name[:bids_name.rfind(os.sep)]
             pathlib.Path(bids_path).mkdir(parents=True, exist_ok=True)
-            os.rename(join(unzipped_dir, file), join(raw_dir, raw_bids))
+            try:
+                os.rename(join(unzipped_dir, file), join(raw_dir, raw_bids))
+            except OSError:
+                shutil.copyfile(join(unzipped_dir, file), join(raw_dir, raw_bids))
         elif (source_bids is not None and source_dir is not None):
             # File is source
             bids_name = join(source_dir, source_bids)
             bids_path = bids_name[:bids_name.rfind(os.sep)]
             pathlib.Path(bids_path).mkdir(parents=True, exist_ok=True)
-            os.rename(join(unzipped_dir, file), join(source_dir, source_bids))
+            try:
+                os.rename(join(unzipped_dir, file), join(source_dir, source_bids))
+            except OSError:
+                shutil.copyfile(join(unzipped_dir, file), join(source_dir, source_bids))
         elif(deriv_bids is not None and derivatives_dir is not None):
             # NOTE: Derivs must be checked last; since there's no standard for derivatives yet, we're placing
             # everything there as-is, but prepended with the subject ID.
@@ -81,7 +87,10 @@ def bids_from_zip(zip_filepath: str, raw_dir: str = None, derivatives_dir: str =
             bids_name = join(derivatives_dir, deriv_bids)
             bids_path = bids_name[:bids_name.rfind(os.sep)]
             pathlib.Path(bids_path).mkdir(parents=True, exist_ok=True)
-            os.rename(join(unzipped_dir, file), join(derivatives_dir, deriv_bids))
+            try:
+                os.rename(join(unzipped_dir, file), join(derivatives_dir, deriv_bids))
+            except OSError:
+                shutil.copyfile(join(unzipped_dir, file), join(derivatives_dir, deriv_bids))
         else:
             Warning(f'File {file} was not sorted.')
 
