@@ -2,7 +2,7 @@
 
 ## Input parsing
 set -e -u
-
+workers=1
 shift
 while (( "$#" )); do
 	case "$1" in
@@ -14,6 +14,9 @@ while (( "$#" )); do
 			ukbgene="`readlink -f ${2}`"
 			shift 2
 			;;
+		-w|--workers)
+			workers="${2}"
+			shift 2;;
 		-*|--*=)
 			echo "Invalid flag ${1}" >&2
 			exit 1
@@ -29,7 +32,9 @@ if [ ! -e calls ]; then
 	datalad create --description "Calls genetics data (UKBB)" calls
 fi
 cd calls
+i=0
 for ch in ${chroms[@]}; do
+	((i=i%${workers})); ((i++==0)) && wait
 	datalad run ${ukbgene} cal -a${authkey} -c${ch}
 done
 # Get .fam file (they're all identical)
@@ -91,8 +96,11 @@ datalad run --input ${raw}/ukb_imp_mfi.tgz tar -xf ${tmpdir}/ukb_imp_mfi.tgz -C 
 
 cd imputed/
 # Imputation data (very large)
+i=0
 for ch in ${chroms[@]}; do
+	((i=i%${workers})); ((i++==0)) && wait
 	datalad run ${ukbgene} imp -a${authkey} -c${ch}
 	datalad run ${ukbgene} imp -m -a${authkey} -c${ch}
 done
+wait
 cd ../
