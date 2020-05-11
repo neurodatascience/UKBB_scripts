@@ -98,7 +98,7 @@ def merge_fetched(fetched_dir: str) -> list:
     fetched_all = []
     for fil in dirlist:
         if('.lis' in fil):
-            f = open(fil, 'r')
+            f = open(os.path.join(fetched_dir, fil), 'r')
             fetched_buf = f.readlines()
             f.close()
             for fetched in fetched_buf:
@@ -159,8 +159,8 @@ def reduce_bulk_from_fetched(bulk_filename: str, fetched_filename: str, save_fil
     return missing_list
 
 
-def generate_bulk_slurm(bulk_filename: str, key_filename: str, save_name: str, num_jobs: int=10, connection_speed=10,
-                        slurm_account: str=None) -> None:
+def generate_bulk_slurm(bulk_filename: str, key_filename: str, save_name: str, num_jobs: int = 10,
+                        connection_speed: int = 10, slurm_account: str = None) -> None:
     """
     Generates a SLURM job file to match program constraints. UKBB allows up to 10 simultaneous downloads, and the
     ukbfetch utility allows up to 1000 lines per call.
@@ -180,7 +180,6 @@ def generate_bulk_slurm(bulk_filename: str, key_filename: str, save_name: str, n
         Approximate value in MB/s of transfer speed. Used for requesting resource time from SLURM.
     slurm_account : str
         Optional. Specify the name of the account to use for accounting purposes.
-
     Returns
     ----------
     None
