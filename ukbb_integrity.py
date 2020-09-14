@@ -112,3 +112,23 @@ def dmri_check(subject:str, directory='./'):
         if('.nii.gz' in d):
             count += 1
     return count >= dmri_count
+
+
+def subject_list_check(dirlist: list) -> list:
+    '''
+    Checks whether top-level content is the same across directories, and returns a list of entries that aren't.
+    Parameters
+    ----------
+    dirlist : list
+        List of directories to check
+
+    Returns
+    -------
+    list
+        List of content that isn't the same across the directories.
+    '''
+    subject_sets = [{*os.listdir(d)} for d in dirlist]
+    diffset = set()
+    for d in subject_sets[1:]:
+        diffset = diffset | subject_sets[0].symmetric_difference(d)
+    return list(diffset)
