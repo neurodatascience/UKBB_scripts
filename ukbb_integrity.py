@@ -158,6 +158,6 @@ def subject_list_check(sublist: list, dirlist: list, prepend_sub: bool = False) 
         subject_sets = set(sublist)
     dir_sets = [{*os.listdir(d)} for d in dirlist]
     diffset = set()
-    for d in dir_sets[1:]:
+    for d in dir_sets:
         diffset = diffset | subject_sets.difference(d)
     return list(diffset)
