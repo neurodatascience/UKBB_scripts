@@ -114,7 +114,7 @@ def dmri_check(subject:str, directory='./'):
     return count >= dmri_count
 
 
-def subject_list_check(dirlist: list) -> list:
+def dir_content_check(dirlist: list) -> list:
     '''
     Checks whether top-level content is the same across directories, and returns a list of entries that aren't.
     Parameters
@@ -131,4 +131,33 @@ def subject_list_check(dirlist: list) -> list:
     diffset = set()
     for d in subject_sets[1:]:
         diffset = diffset | subject_sets[0].symmetric_difference(d)
+    return list(diffset)
+
+
+def subject_list_check(sublist: list, dirlist: list, prepend_sub: bool = False) -> list:
+    '''
+    Checks whether the subjects in 'sublist' are present as directories in each of the directories in 'dirlist'
+    Parameters
+    ----------
+    sublist : list
+        List of subject IDs that should be in each directory.
+    dirlist : list
+        List of directories to check.
+    prepend_sub : bool
+        Optional. Whether to prepend "sub-" to the subject IDs in 'sublist'
+
+    Returns
+    -------
+    list
+        List of subjects that aren't in all directories.
+    '''
+    if(prepend_sub):
+        prep = ['sub-' + p for p in sublist if p[:4] != 'sub-']
+        subject_sets = set(prep)
+    else:
+        subject_sets = set(sublist)
+    dir_sets = [{*os.listdir(d)} for d in dirlist]
+    diffset = set()
+    for d in dir_sets[1:]:
+        diffset = diffset | subject_sets.difference(d)
     return list(diffset)
