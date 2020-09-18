@@ -231,7 +231,7 @@ def generate_bulk_slurm(bulk_filename: str, key_filename: str, save_name: str, u
     f.write(f'cp {bulk_filename} {download_dir}/bulkfile.bulk\n')
     # f.write(f'export {localscratch}\n\n')
     f.write(f'cd {download_dir}\n\n')
-    fetch_string = 'ukbfetch -b bulkfile.bulk -a keyfile' + \
+    fetch_string = './ukbfetch -b bulkfile.bulk -a keyfile' + \
                    ' -ofetched_$((SLURM_ARRAY_TASK_ID))_{2} -s$((SLURM_ARRAY_TASK_ID*' + \
                    str(num_files_per_job) + '+{0})) -m{1}\n'
 
