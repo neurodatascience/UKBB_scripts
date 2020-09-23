@@ -225,22 +225,37 @@ def generate_bulk_slurm(bulk_filename: str, key_filename: str, save_name: str, u
 
     localscratch = '${SLURM_TMPDIR}'
     # Copy ukbfetch, key and bulk file to local scratch (frequent access, doesn't need to be transferred back)
-    f.write(f'cp {ukbfetch_loc} {download_dir}/ukbfetch\n')
-    f.write(f'chmod u+x {download_dir}/ukbfetch\n')
-    f.write(f'cp {key_filename} {download_dir}/keyfile\n')
-    f.write(f'cp {bulk_filename} {download_dir}/bulkfile.bulk\n')
+    f.write(f'cp {ukbfetch_loc} {localscratch}/ukbfetch\n')
+    f.write(f'chmod u+x {localscratch}/ukbfetch\n')
+    f.write(f'cp {key_filename} {localscratch}/keyfile\n')
+    if(field is not None):
+        f.write(f'grep {field} {bulk_filename}' + ' >> ${SLURM_TMPDIR}/bulkfile.bulk\n')
+    else:
+        f.write(f'cp {bulk_filename} {download_dir}/bulkfile.bulk\n')
     # f.write(f'export {localscratch}\n\n')
     f.write(f'cd {download_dir}\n\n')
-    fetch_string = './ukbfetch -b bulkfile.bulk -a keyfile' + \
-                   ' -ofetched_$((SLURM_ARRAY_TASK_ID))_{2} -s$((SLURM_ARRAY_TASK_ID*' + \
-                   str(num_files_per_job) + '+{0})) -m{1}\n'
+
+    bulk_opt = '${SLURM_TMPDIR}/bulkfile.bulk'
+    key_opt = '${SLURM_TMPDIR}/keyfile'
+    fetched_opt = 'fetched_$((SLURM_ARRAY_TASK_ID))_{fetch_ind}'
+    start_opt = '$((SLURM_ARRAY_TASK_ID*' + str(num_files_per_job) + '+{0}))'
+    num_opt='{0}'
+
+
+
+    # fetch_string = './ukbfetch -b${SLURM_TMPDIR}/bulkfile.bulk -a${SLURM_TMPDIR}/keyfile ' \
+    #                '-ofetched_$((SLURM_ARRAY_TASK_ID))_{2} ' + \
+    #                '-s$((SLURM_ARRAY_TASK_ID*' + \
+    #                str(num_files_per_job) + '+{0})) -m{1}\n'
 
     for fetch_ind in range(math.ceil(num_files_per_job/ukbfetch_max_files)):
         files_in_fetch = min(num_files_per_job - ukbfetch_max_files*fetch_ind, ukbfetch_max_files)
-        f.write(fetch_string.format(ukbfetch_max_files*fetch_ind, files_in_fetch, fetch_ind, localscratch))
-    f.write(f'rm {download_dir}/ukbfetch\n')
-    f.write(f'rm {download_dir}/bulkfile.bulk\n')
-    f.write(f'rm {download_dir}/keyfile\n')
+        fetch_string = '${SLURM_TMPDIR}/ukbfetch' + f' -b{bulk_opt}' + f' -a{key_opt} ' + \
+                       ' -o' + fetched_opt.format(fetch_ind=fetch_ind) + ' -s' + start_opt.format(ukbfetch_max_files*fetch_ind) + \
+            ' -m' + num_opt.format(files_in_fetch) + '\n'
+        # f.write(fetch_string.format(ukbfetch_max_files*fetch_ind, files_in_fetch, fetch_ind, localscratch))
+        f.write(fetch_string)
+    f.write('rm ${SLURM_TMPDIR/*')
     f.close()
     print('SLURM batch file generated; estimated completion time is {}d:{}h'.format(expected_time[0], expected_time[1]))
     return
