@@ -1,4 +1,4 @@
-import os, math
+import os, math, tempfile
 
 
 def identify_missing_bids(source_list_filename: str, dest_list_filename: str,
@@ -98,7 +98,7 @@ def merge_fetched(fetched_dir: str) -> list:
     fetched_all = []
     for fil in dirlist:
         if('.lis' in fil):
-            f = open(fil, 'r')
+            f = open(os.path.join(fetched_dir, fil), 'r')
             fetched_buf = f.readlines()
             f.close()
             for fetched in fetched_buf:
@@ -159,8 +159,10 @@ def reduce_bulk_from_fetched(bulk_filename: str, fetched_filename: str, save_fil
     return missing_list
 
 
-def generate_bulk_slurm(bulk_filename: str, key_filename: str, save_name: str, num_jobs: int=10, connection_speed=10,
-                        slurm_account: str=None) -> None:
+def generate_bulk_slurm(bulk_filename: str, key_filename: str, save_name: str, ukbfetch_loc: str,
+                        download_dir: str = './', field: str=None, num_jobs: int = 10, connection_speed: int = 10,
+                        slurm_account: str = None, average_file_size: int = 500,
+                        ukbfetch_max_files: int = 1000) -> None:
     """
     Generates a SLURM job file to match program constraints. UKBB allows up to 10 simultaneous downloads, and the
     ukbfetch utility allows up to 1000 lines per call.
@@ -173,14 +175,21 @@ def generate_bulk_slurm(bulk_filename: str, key_filename: str, save_name: str, n
         Filename for the key file associated with the bulk file.
     save_name : str
         Filename for the SLURM file
+    ukbfetch_loc : str
+        Filepath for ukbfetch utility
+    download_dir : str
+        Optional. Path where to download data.
     num_jobs : int
-        Number of jobs across which to split the downloads (i.e. number of simultaenous downloads). WARNING: values
+        Optional. Number of jobs across which to split the downloads (i.e. number of simultaenous downloads). WARNING: values
         greater than 10 are likely to cause problems. Default: 10
     connection_speed : float
-        Approximate value in MB/s of transfer speed. Used for requesting resource time from SLURM.
+        Optional. Approximate value in MB/s of transfer speed. Used for requesting resource time from SLURM.
     slurm_account : str
         Optional. Specify the name of the account to use for accounting purposes.
-
+    average_file_size : int
+        Optional. Average incoming file size in MB.
+    ukbfetch_max_files : int
+        Optional. Maximum number of files per bulk file.
     Returns
     ----------
     None
@@ -188,9 +197,6 @@ def generate_bulk_slurm(bulk_filename: str, key_filename: str, save_name: str, n
     # Max number of simultaneous downloads is 10
     # (https://biobank.ndph.ox.ac.uk/showcase/docs/ukbfetch_instruct.html, section 2)
     # ukbfetch can fetch up to 1,000 lines (docs say 50k; program says 1k)
-
-    average_file_size = 500  # size in MB
-    ukbfetch_max_files = 1000
 
     f = open(save_name, 'w')
     if(num_jobs>10):
@@ -205,19 +211,51 @@ def generate_bulk_slurm(bulk_filename: str, key_filename: str, save_name: str, n
     bulk_file = open(bulk_filename, 'r')
     bulk_list = bulk_file.readlines()
     bulk_file.close()
-    num_files = len(bulk_list)
+
+    # If 'field' is defined; restrict bulkfile count to only field
+    if(field is not None):
+        num_files = sum([field in b for b in bulk_list])
+    else:
+        num_files = len(bulk_list)
     num_files_per_job = math.ceil(num_files / num_jobs)
-    expected_time_per_job = num_files_per_job * average_file_size / connection_speed * 1.1  # 10% margin of error
+    expected_time_per_job = num_files_per_job * average_file_size / connection_speed * 1.2  # 20% margin of error
 
     expected_time = _convert_seconds(expected_time_per_job)
     f.write('#SBATCH --time={}-{}:{}\n\n'.format(*expected_time))
-    fetch_string = 'ukbfetch -b' + bulk_filename + ' -a' + key_filename + \
-                   ' -ofetched_$((SLURM_ARRAY_TASK_ID))_{2}' \
-                   ' -s$((SLURM_ARRAY_TASK_ID*' + str(num_files_per_job) + '+{0})) -m{1}\n'
+
+    localscratch = '${SLURM_TMPDIR}'
+    # Copy ukbfetch, key and bulk file to local scratch (frequent access, doesn't need to be transferred back)
+    f.write(f'cp {ukbfetch_loc} {localscratch}/ukbfetch\n')
+    f.write(f'chmod u+x {localscratch}/ukbfetch\n')
+    f.write(f'cp {key_filename} {localscratch}/keyfile\n')
+    if(field is not None):
+        f.write(f'grep {field} {bulk_filename}' + ' >> ${SLURM_TMPDIR}/bulkfile.bulk\n')
+    else:
+        f.write(f'cp {bulk_filename} {download_dir}/bulkfile.bulk\n')
+    # f.write(f'export {localscratch}\n\n')
+    f.write(f'cd {download_dir}\n\n')
+
+    bulk_opt = '${SLURM_TMPDIR}/bulkfile.bulk'
+    key_opt = '${SLURM_TMPDIR}/keyfile'
+    fetched_opt = 'fetched_$((SLURM_ARRAY_TASK_ID))_{fetch_ind}'
+    start_opt = '$((SLURM_ARRAY_TASK_ID*' + str(num_files_per_job) + '+{0}))'
+    num_opt='{0}'
+
+
+
+    # fetch_string = './ukbfetch -b${SLURM_TMPDIR}/bulkfile.bulk -a${SLURM_TMPDIR}/keyfile ' \
+    #                '-ofetched_$((SLURM_ARRAY_TASK_ID))_{2} ' + \
+    #                '-s$((SLURM_ARRAY_TASK_ID*' + \
+    #                str(num_files_per_job) + '+{0})) -m{1}\n'
 
     for fetch_ind in range(math.ceil(num_files_per_job/ukbfetch_max_files)):
         files_in_fetch = min(num_files_per_job - ukbfetch_max_files*fetch_ind, ukbfetch_max_files)
-        f.write(fetch_string.format(ukbfetch_max_files*fetch_ind, files_in_fetch, fetch_ind))
+        fetch_string = '${SLURM_TMPDIR}/ukbfetch' + f' -b{bulk_opt}' + f' -a{key_opt} ' + \
+                       ' -o' + fetched_opt.format(fetch_ind=fetch_ind) + ' -s' + start_opt.format(ukbfetch_max_files*fetch_ind) + \
+            ' -m' + num_opt.format(files_in_fetch) + '\n'
+        # f.write(fetch_string.format(ukbfetch_max_files*fetch_ind, files_in_fetch, fetch_ind, localscratch))
+        f.write(fetch_string)
+    f.write('rm ${SLURM_TMPDIR/*')
     f.close()
     print('SLURM batch file generated; estimated completion time is {}d:{}h'.format(expected_time[0], expected_time[1]))
     return
