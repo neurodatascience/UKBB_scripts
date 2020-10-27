@@ -9,41 +9,41 @@ while (( "$#" )); do
         case "$1" in
                 -u|--util)
                   	# fetch utility path
-			fetch=`readlink -f "${1}"`
+			fetch=`readlink -f "${2}"`
 			shift 2
 			;;
 		-b|--bulk)
 			# bulk file path
-			bulk=`readlink -f "${1}"`
+			bulk=`readlink -f "${2}"`
 			shift 2
 			;;
 		-a|--keyfile)
 			# keyfile path ("a" is for consistency with ukbb utils, "authkey")
-			keyfile=`readlink -f "${1}"`
+			keyfile=`readlink -f "${2}"`
 			shift 2
 			;;
 #		-i|--index)
 #			# starting index; if this is the fifth job in 10, idx=4.
-#			idx="${1}"
+#			idx="${2}"
 #			shift 2
 #			;;
 		-l|--blocks)
 			# number of blocks
-			blocks="${1}"
+			blocks="${2}"
 			shift 2
 			;;
 		-n|--numjobs)
 			# number of jobs downloading the data (used to determine how much each should download)
-			njob="${1}"
+			njob="${2}"
 			shift 2
 			;;
 		-f|--field)
 			# field id
-			field="${1}"
+			field="${2}"
 			shift 2
 			;;
                 -*|--*=)
-                  echo "Invalid flag ${1}" >&2
+                  echo "Invalid flag ${2}" >&2
                   exit 1
                   ;;
         esac
