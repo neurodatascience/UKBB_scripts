@@ -14,7 +14,7 @@ while (( "$#" )); do
 			;;
 		-a|--keyfile)
 			# keyfile path ("a" is for consistency with ukbb utils, "authkey")
-			keyfile=`readlink -f "${2}"`
+			keyfile="${2}"
 			shift 2
 			;;
 #		-i|--index)
