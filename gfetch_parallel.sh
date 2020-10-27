@@ -12,11 +12,6 @@ while (( "$#" )); do
 			fetch=`readlink -f "${2}"`
 			shift 2
 			;;
-		-b|--bulk)
-			# bulk file path
-			bulk=`readlink -f "${2}"`
-			shift 2
-			;;
 		-a|--keyfile)
 			# keyfile path ("a" is for consistency with ukbb utils, "authkey")
 			keyfile=`readlink -f "${2}"`
@@ -53,10 +48,6 @@ done
 # Check that all necessary variables are defined
 if [ -z ${fetch} ]; then
 	echo "Fetch utility undefined; provide path using -f flag"
-	exit 1
-fi
-if [ -z ${bulk} ]; then
-	echo "Bulk file undefined; provide path using -b flag"
 	exit 1
 fi
 if [ -z ${keyfile} ]; then
